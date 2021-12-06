@@ -1,0 +1,14 @@
+name: movierecommender
+title:
+username:
+account: mcclanalytics
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5273450
+bundleId: 5331868
+url: https://mcclanalytics.shinyapps.io/movierecommender/
+when: 1638762573.05264
+lastSyncTime: 1638762573.05264
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: functions/cf_algorithm.R|functions/similarity_measures.R
