@@ -1,8 +1,11 @@
 ## server.R
 
 # load functions
-source('functions/cf_algorithm.R') # collaborative filtering
-source('functions/similarity_measures.R') # similarity measures
+# source('functions/cf_algorithm.R') # collaborative filtering
+# source('functions/similarity_measures.R') # similarity measures
+
+library(dplyr)
+library(tidyr)
 
 # define functions
 get_user_ratings = function(value_list) {
@@ -29,6 +32,14 @@ small_image_url = "https://liangfgithub.github.io/MovieImages/"
 movies$image_url = sapply(movies$MovieID, 
                           function(x) paste0(small_image_url, x, '.jpg?raw=true'))
 
+top_movies_by_genre = readRDS("top_10_most_popular_by_genre.rds")
+
+get_top_10_by_genre = function(selected_genre) {
+	top_10 = filter(top_movies_by_genre, Genre == selected_genre)
+	print(top_10)
+	top_10
+}
+
 shinyServer(function(input, output, session) {
   
   # show the books to be rated
@@ -48,7 +59,7 @@ shinyServer(function(input, output, session) {
   })
   
   # Calculate recommendations when the sbumbutton is clicked
-  df <- eventReactive(input$btn, {
+  df_event_react <- eventReactive(input$btn, {
     withBusyIndicatorServer("btn", { # showing the busy indicator
         # hide the rating container
         useShinyjs()
@@ -57,14 +68,22 @@ shinyServer(function(input, output, session) {
         
         # get the user's rating data
         value_list <- reactiveValuesToList(input)
-        user_ratings <- get_user_ratings(value_list)
-        
-        user_results = (1:10)/10
-        user_predicted_ids = 1:10
-        recom_results <- data.table(Rank = 1:10, 
+
+		if (input$tabs == "byGenre") {
+			top_10 = get_top_10_by_genre(input$selectedGenre)
+       		recom_result <- data.table(Rank = top_10$Movie_Genre_Rank, 
+                                    MovieID = top_10$MovieID, 
+                                    Title = top_10$Title, 
+                                    Predicted_rating = top_10$Avg_Rating)			
+		} else {
+			user_ratings <- get_user_ratings(value_list)
+        	user_results = (1:10)/10
+        	user_predicted_ids = 1:10
+        	recom_result <- data.table(Rank = 1:10, 
                                     MovieID = movies$MovieID[user_predicted_ids], 
                                     Title = movies$Title[user_predicted_ids], 
-                                    Predicted_rating =  user_results)
+                                    Predicted_rating =  user_results)			
+		}
         
     }) # still busy
     
@@ -75,17 +94,17 @@ shinyServer(function(input, output, session) {
   output$results <- renderUI({
     num_rows <- 2
     num_movies <- 5
-    recom_result <- df()
-    
+    recom_result <- df_event_react()
+    print(recom_result)
     lapply(1:num_rows, function(i) {
       list(fluidRow(lapply(1:num_movies, function(j) {
         box(width = 2, status = "success", solidHeader = TRUE, title = paste0("Rank ", (i - 1) * num_movies + j),
             
           div(style = "text-align:center", 
-              a(img(src = movies$image_url[recom_result$MovieID[(i - 1) * num_movies + j]], height = 150))
+              a(img(src = movies$image_url[movies$MovieID == recom_result$MovieID[(i - 1) * num_movies + j]], height = 150))
              ),
           div(style="text-align:center; font-size: 100%", 
-              strong(movies$Title[recom_result$MovieID[(i - 1) * num_movies + j]])
+              strong(movies$Title[movies$MovieID == recom_result$MovieID[(i - 1) * num_movies + j]])
              )
           
         )        
